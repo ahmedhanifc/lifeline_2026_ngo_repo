@@ -116,3 +116,11 @@ lastUpdatedAt
 /cases/{caseId}/checkups/{noteId}
 /cases/{caseId}/distress/{eventId}
 /assignments/{assignmentId} with fields: caseId, responderId, isActive
+
+
+# Connecting to a mobile device
+
+adb devices
+
+# Rebuilding
+./gradlew clean installDebug

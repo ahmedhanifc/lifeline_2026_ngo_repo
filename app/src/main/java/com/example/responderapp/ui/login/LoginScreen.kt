@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 
+
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
@@ -142,17 +143,6 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Social Login Placeholders (Visual Only)
-        Text("Or sign in with", color = Color.Gray, fontSize = 14.sp)
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        OutlinedButton(
-            onClick = { /* TODO */ },
-            modifier = Modifier.fillMaxWidth().height(50.dp),
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            Text("Sign in with Google", color = Color.Black)
-        }
         
     }
 }

@@ -13,6 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.responderapp.ui.theme.ResponderAppTheme
 import dagger.hilt.android.AndroidEntryPoint
+import android.util.Log
+import com.example.responderapp.ui.navigation.AppNavigation
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -21,11 +23,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             ResponderAppTheme {
-                LoginScreen(
-                    onLoginSuccess = {
-                        Log.d("Lifelines", "Login Successful! Navigate to Dashboard.")
-                    }
-                )
+                AppNavigation()
             }
         }
     }
