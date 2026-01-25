@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "165408765543",
+    "project_id": "ngoapp-98503",
+    "storage_bucket": "ngoapp-98503.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:165408765543:android:20ce7140aaa9aa4b6c06c2",
+        "android_client_info": {
+          "package_name": "com.example.responderapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDBV5yxVGfk1MghmgqItpRJ_x6pZVCtBG8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
