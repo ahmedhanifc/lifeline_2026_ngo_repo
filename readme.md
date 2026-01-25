@@ -44,7 +44,7 @@ last updated at
 # Central Database
 Firebase will be used. This database has already been setup.
 
-## Online Database AND Offline Database
+## Online Database AND Offline Database (Room)
 PregnancyCase
 - caseId
 - patientFullName
@@ -53,7 +53,9 @@ PregnancyCase
 - allergies
 - lastCheckupAt
 - lastCheckupSummary
+- createdAt
 - updatedAt
+- keyRisks
 - status (ACTIVE, CLOSED, LOST_FOLLOWUP)
 
 CheckupNote 
@@ -106,3 +108,11 @@ keyRisks
 lastCheckupSummary
 lastCheckupAt
 lastUpdatedAt
+
+
+# Firestore Structure
+/users/{userId}
+/cases/{caseId}
+/cases/{caseId}/checkups/{noteId}
+/cases/{caseId}/distress/{eventId}
+/assignments/{assignmentId} with fields: caseId, responderId, isActive
