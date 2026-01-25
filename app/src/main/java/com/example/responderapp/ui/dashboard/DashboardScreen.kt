@@ -26,7 +26,10 @@ import androidx.compose.runtime.getValue
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
+fun DashboardScreen(
+    onNavigateToAddCase: () -> Unit,
+    viewModel: DashboardViewModel = hiltViewModel()
+) {
     val primaryBlue = Color(0xFF3B6EB4)
     val caseCount by viewModel.caseCount.collectAsState()
 
@@ -109,10 +112,10 @@ fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
             )
 
             val features = listOf(
-                DashboardFeature("My Records", "$caseCount Local", Icons.Outlined.Folder, primaryBlue),
-                DashboardFeature("Scan Tag", "NFC Read", Icons.Outlined.Nfc, Color(0xFFE91E63)),
-                DashboardFeature("New Case", "Create", Icons.Filled.Add, Color(0xFF4CAF50)),
-                DashboardFeature("Sync Data", "Pending", Icons.Filled.CloudUpload, Color(0xFFFF9800))
+                DashboardFeature("My Records", "$caseCount Local", Icons.Outlined.Folder, primaryBlue) {},
+                DashboardFeature("Scan Tag", "NFC Read", Icons.Outlined.Nfc, Color(0xFFE91E63)) {},
+                DashboardFeature("New Case", "Create", Icons.Filled.Add, Color(0xFF4CAF50), onNavigateToAddCase),
+                DashboardFeature("Sync Data", "Pending", Icons.Filled.CloudUpload, Color(0xFFFF9800)) {}
             )
 
             LazyVerticalGrid(
@@ -148,7 +151,13 @@ fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
     }
 }
 
-data class DashboardFeature(val title: String, val subtitle: String, val icon: ImageVector, val color: Color)
+data class DashboardFeature(
+    val title: String,
+    val subtitle: String,
+    val icon: ImageVector,
+    val color: Color,
+    val onClick: () -> Unit
+)
 
 @Composable
 fun FeatureCard(feature: DashboardFeature) {
@@ -159,7 +168,7 @@ fun FeatureCard(feature: DashboardFeature) {
         modifier = Modifier
             .fillMaxWidth()
             .height(110.dp)
-            .clickable { /* TODO */ }
+            .clickable { feature.onClick() }
     ) {
         Column(
             modifier = Modifier

@@ -6,10 +6,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.responderapp.ui.dashboard.DashboardScreen
 import com.example.responderapp.ui.login.LoginScreen
+import com.example.responderapp.ui.cases.AddCaseScreen
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
     object Dashboard : Screen("dashboard")
+    object AddCase : Screen("add_case")
 }
 
 @Composable
@@ -32,7 +34,23 @@ fun AppNavigation() {
 
         // Dashboard Screen Route
         composable(Screen.Dashboard.route) {
-            DashboardScreen()
+            DashboardScreen(
+                onNavigateToAddCase = {
+                    navController.navigate(Screen.AddCase.route)
+                }
+            )
+        }
+
+        // Add Case Screen Route
+        composable(Screen.AddCase.route) {
+            com.example.responderapp.ui.cases.AddCaseScreen(
+                onCaseSaved = {
+                    navController.popBackStack()
+                },
+                onBack = {
+                    navController.popBackStack()
+                }
+            )
         }
     }
 }

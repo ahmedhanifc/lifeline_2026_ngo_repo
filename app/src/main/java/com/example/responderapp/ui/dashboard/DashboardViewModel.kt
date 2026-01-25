@@ -23,6 +23,6 @@ class DashboardViewModel @Inject constructor(
             initialValue = 0
         )
         
-    // In a real scenario, you might map this list to a UI model
+    // FLAG In a real scenario, you might map this list to a UI model
     // For now, we just want to see if data flows.
 }
