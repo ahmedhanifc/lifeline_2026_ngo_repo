@@ -43,3 +43,66 @@ last updated at
 
 # Central Database
 Firebase will be used. This database has already been setup.
+
+## Online Database AND Offline Database
+PregnancyCase
+- caseId
+- patientFullName
+- dateOfBirth
+- pregnancyStage
+- allergies
+- lastCheckupAt
+- lastCheckupSummary
+- updatedAt
+- status (ACTIVE, CLOSED, LOST_FOLLOWUP)
+
+CheckupNote 
+- noteId
+- caseId
+- responderId
+- checkupAt
+- noteText
+- createdAt
+- updatedAt
+
+DistressEvent
+- eventId
+- caseId
+- occuredAt
+- recievedAt
+- latitude
+- longitude
+- status (OPEN, ACKED, RESOLVED, FALSE_ALARM)
+
+UserAccount
+- userId
+- fullName
+- role (RESPONDER, SUPERVISOR)
+- phone
+- email
+- isActive
+- lastLoginAt
+- createdAt
+- updatedAt
+
+Assignment
+- assignmentId
+- caseId
+- responderId
+- assignedAt
+- isActive
+- priority (LOW, MEDIUM, HIGH)
+- createdAt
+- updatedAt
+
+## NFC 
+
+caseId
+patientFullName
+dateOfBirth
+pregnancyStage
+allergies
+keyRisks
+lastCheckupSummary
+lastCheckupAt
+lastUpdatedAt
