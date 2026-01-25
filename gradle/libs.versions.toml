@@ -13,6 +13,7 @@ ksp = "2.0.21-1.0.28"
 navigationCompose = "2.8.5"
 materialIconsKey = "1.7.6"
 hiltNavigationCompose = "1.2.0"
+room = "2.6.1"
 
 
 [libraries]
@@ -36,6 +37,9 @@ androidx-navigation-compose = { group = "androidx.navigation", name = "navigatio
 androidx-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended", version.ref = "materialIconsKey" }
 firebase-auth = { group = "com.google.firebase", name = "firebase-auth" }
 androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
+androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

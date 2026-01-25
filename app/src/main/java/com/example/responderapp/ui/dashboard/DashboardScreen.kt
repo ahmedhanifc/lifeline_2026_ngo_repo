@@ -20,11 +20,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DashboardScreen() {
+fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
     val primaryBlue = Color(0xFF3B6EB4)
+    val caseCount by viewModel.caseCount.collectAsState()
 
     Scaffold(
         bottomBar = {
@@ -105,7 +109,7 @@ fun DashboardScreen() {
             )
 
             val features = listOf(
-                DashboardFeature("My Records", "12 Local", Icons.Outlined.Folder, primaryBlue),
+                DashboardFeature("My Records", "$caseCount Local", Icons.Outlined.Folder, primaryBlue),
                 DashboardFeature("Scan Tag", "NFC Read", Icons.Outlined.Nfc, Color(0xFFE91E63)),
                 DashboardFeature("New Case", "Create", Icons.Filled.Add, Color(0xFF4CAF50)),
                 DashboardFeature("Sync Data", "Pending", Icons.Filled.CloudUpload, Color(0xFFFF9800))

@@ -124,3 +124,6 @@ adb devices
 
 # Rebuilding
 ./gradlew clean installDebug
+
+# Business Rules
+- Responders cannot create account and must be given an account by an NGO

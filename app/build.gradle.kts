@@ -60,6 +60,11 @@ dependencies {
     implementation(libs.firebase.auth)
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.hilt.navigation.compose)
+    // Room
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    
+    ksp(libs.androidx.room.compiler)
     ksp(libs.hilt.compiler)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
