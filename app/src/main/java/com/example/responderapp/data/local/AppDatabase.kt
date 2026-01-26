@@ -4,12 +4,17 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.example.responderapp.data.local.dao.PregnancyCaseDao
 import com.example.responderapp.data.local.dao.UserDao
+import com.example.responderapp.data.local.entity.CaseUpdateEntity
 import com.example.responderapp.data.local.entity.PregnancyCaseEntity
 import com.example.responderapp.data.local.entity.UserAccountEntity
 
 @Database(
-    entities = [PregnancyCaseEntity::class, UserAccountEntity::class],
-    version = 1,
+    entities = [
+        PregnancyCaseEntity::class, 
+        UserAccountEntity::class,
+        CaseUpdateEntity::class
+        ],
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

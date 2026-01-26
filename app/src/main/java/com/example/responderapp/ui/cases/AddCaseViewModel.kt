@@ -2,6 +2,7 @@ package com.example.responderapp.ui.cases
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.responderapp.data.local.entity.CaseUpdateEntity
 import com.example.responderapp.data.local.entity.PregnancyCaseEntity
 import com.example.responderapp.data.repository.PregnancyCaseRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -45,23 +46,41 @@ class AddCaseViewModel @Inject constructor(
 
     private fun saveCase() {
         val currentState = _uiState.value
-        if (currentState.name.isBlank()) return // Basic validation
+        if (currentState.name.isBlank()) return
 
         viewModelScope.launch {
-            val newCase = PregnancyCaseEntity(
-                caseId = UUID.randomUUID().toString(),
+            val caseId = UUID.randomUUID().toString()
+            val updateId = UUID.randomUUID().toString()
+            val now = System.currentTimeMillis()
+
+            val master = PregnancyCaseEntity(
+                caseId = caseId,
                 patientFullName = currentState.name,
-                dateOfBirth = System.currentTimeMillis(), // Placeholder: In real app, calculate from age/datepicker
+                dateOfBirth = now, // Placeholder
+                createdAt = now,
+                createdBy = "CURRENT_USER_ID", // TODO: Get from Auth
+                latestUpdateId = updateId,
+                isSynced = false
+            )
+
+            val initialUpdate = CaseUpdateEntity(
+                updateId = updateId,
+                caseId = caseId,
+                version = 1,
+                capturedAt = now,
+                updatedBy = "CURRENT_USER_ID", // TODO: Get from Auth
+                isSynced = false,
                 pregnancyStage = currentState.stage,
+                status = "ACTIVE",
                 allergies = currentState.allergies.ifBlank { null },
                 keyRisks = currentState.risks.ifBlank { null },
-                lastCheckupSummary = null,
-                lastCheckupAt = null,
-                status = "ACTIVE",
-                createdAt = System.currentTimeMillis(),
-                updatedAt = System.currentTimeMillis()
+                clinicalNotes = "Initial case creation",
+                mediaPath = null,
+                latitude = null,
+                longitude = null
             )
-            repository.insertCase(newCase)
+
+            repository.createCase(master, initialUpdate)
             _uiState.value = _uiState.value.copy(isSaved = true)
         }
     }

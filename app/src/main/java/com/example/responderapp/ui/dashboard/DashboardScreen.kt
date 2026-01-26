@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 @Composable
 fun DashboardScreen(
     onNavigateToAddCase: () -> Unit,
+    onNavigateToRecords: () -> Unit,
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val primaryBlue = Color(0xFF3B6EB4)
@@ -47,7 +48,7 @@ fun DashboardScreen(
                 )
                 NavigationBarItem(
                     selected = false,
-                    onClick = { /* TODO */ },
+                    onClick = onNavigateToRecords,
                     icon = { Icon(Icons.Outlined.Description, contentDescription = "Records") },
                     label = { Text("Records") }
                 )
@@ -112,7 +113,7 @@ fun DashboardScreen(
             )
 
             val features = listOf(
-                DashboardFeature("My Records", "$caseCount Local", Icons.Outlined.Folder, primaryBlue) {},
+                DashboardFeature("My Records", "$caseCount Local", Icons.Outlined.Folder, primaryBlue, onNavigateToRecords),
                 DashboardFeature("Scan Tag", "NFC Read", Icons.Outlined.Nfc, Color(0xFFE91E63)) {},
                 DashboardFeature("New Case", "Create", Icons.Filled.Add, Color(0xFF4CAF50), onNavigateToAddCase),
                 DashboardFeature("Sync Data", "Pending", Icons.Filled.CloudUpload, Color(0xFFFF9800)) {}
