@@ -1,0 +1,3 @@
+- Understanding of the content (Does the structure make sense)
+- Is anything mentioned in a socially acceptible way
+- Missing Information something thats not there but should be

@@ -34,4 +34,17 @@ interface PregnancyCaseDao {
         insertMaster(master)
         insertUpdate(initialUpdate)
     }
+
+    // Sync Helpers
+    @Query("SELECT * FROM pregnancy_cases WHERE isSynced = 0")
+    suspend fun getUnsyncedCases(): List<PregnancyCaseEntity>
+
+    @Query("SELECT * FROM case_updates WHERE isSynced = 0")
+    suspend fun getUnsyncedUpdates(): List<CaseUpdateEntity>
+
+    @Query("UPDATE pregnancy_cases SET isSynced = 1 WHERE caseId IN (:ids)")
+    suspend fun markCasesAsSynced(ids: List<String>)
+
+    @Query("UPDATE case_updates SET isSynced = 1 WHERE updateId IN (:ids)")
+    suspend fun markUpdatesAsSynced(ids: List<String>)
 }

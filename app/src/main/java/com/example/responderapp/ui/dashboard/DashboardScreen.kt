@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -40,6 +41,33 @@ fun DashboardScreen(
     val primaryBlue = Color(0xFF3B6EB4)
     val caseCount by viewModel.caseCount.collectAsState()
     val recentCases by viewModel.recentCases.collectAsState()
+    val syncState by viewModel.syncState.collectAsState()
+
+    if (syncState is SyncState.Error) {
+        AlertDialog(
+            onDismissRequest = { viewModel.resetSyncState() },
+            title = { Text("Sync Failed") },
+            text = { Text((syncState as SyncState.Error).message) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.resetSyncState() }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+
+    if (syncState is SyncState.Success) {
+        AlertDialog(
+            onDismissRequest = { viewModel.resetSyncState() },
+            title = { Text("Sync Complete") },
+            text = { Text("All records have been successfully synchronized to the cloud.") },
+            confirmButton = {
+                TextButton(onClick = { viewModel.resetSyncState() }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
 
     Box(
         modifier = Modifier
@@ -93,7 +121,11 @@ fun DashboardScreen(
                 DashboardFeature("My Records", "$caseCount Local", Icons.Outlined.Folder, primaryBlue, onNavigateToRecords),
                 DashboardFeature("Scan Tag", "NFC Read", Icons.Outlined.Nfc, Color(0xFFE91E63)) {},
                 DashboardFeature("New Case", "Create", Icons.Filled.Add, Color(0xFF4CAF50), onNavigateToAddCase),
-                DashboardFeature("Sync Data", "Pending", Icons.Filled.CloudUpload, Color(0xFFFF9800)) {}
+                if (syncState is SyncState.Syncing) {
+                    DashboardFeature("Syncing...", "Please wait", Icons.Filled.CloudSync, Color.Gray) {}
+                } else {
+                    DashboardFeature("Sync Data", "Upload", Icons.Filled.CloudUpload, Color(0xFFFF9800)) { viewModel.syncData() }
+                }
             )
 
             LazyVerticalGrid(
