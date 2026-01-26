@@ -29,6 +29,7 @@ import java.util.*
 @Composable
 fun PatientDetailScreen(
     onBack: () -> Unit,
+    onEdit: (String) -> Unit, // Callback for editing
     viewModel: PatientDetailViewModel = hiltViewModel()
 ) {
     val record by viewModel.patientRecord.collectAsState()
@@ -41,6 +42,13 @@ fun PatientDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    record?.let { data ->
+                        TextButton(onClick = { onEdit(data.master.caseId) }) {
+                            Text("EDIT", color = primaryBlue, fontWeight = FontWeight.Bold)
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)

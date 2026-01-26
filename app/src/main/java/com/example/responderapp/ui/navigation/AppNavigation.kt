@@ -17,6 +17,9 @@ sealed class Screen(val route: String) {
     object PatientDetail : Screen("patient_detail/{caseId}") {
         fun createRoute(caseId: String) = "patient_detail/$caseId"
     }
+    object EditCase : Screen("edit_case/{caseId}") {
+        fun createRoute(caseId: String) = "edit_case/$caseId"
+    }
 }
 
 @Composable
@@ -39,7 +42,10 @@ fun AppNavigation() {
         composable(Screen.Dashboard.route) {
             DashboardScreen(
                 onNavigateToAddCase = { navController.navigate(Screen.AddCase.route) },
-                onNavigateToRecords = { navController.navigate(Screen.Records.route) }
+                onNavigateToRecords = { navController.navigate(Screen.Records.route) },
+                onNavigateToDetail = { caseId -> 
+                    navController.navigate(Screen.PatientDetail.createRoute(caseId))
+                }
             )
         }
 
@@ -61,7 +67,24 @@ fun AppNavigation() {
             )
         ) {
             com.example.responderapp.ui.records.PatientDetailScreen(
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onEdit = { caseId ->
+                    navController.navigate(Screen.EditCase.createRoute(caseId))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.EditCase.route,
+            arguments = listOf(
+                androidx.navigation.navArgument("caseId") { 
+                    type = androidx.navigation.NavType.StringType 
+                }
+            )
+        ) {
+            com.example.responderapp.ui.cases.EditCaseScreen(
+                onBack = { navController.popBackStack() },
+                onSaved = { navController.popBackStack() }
             )
         }
 
