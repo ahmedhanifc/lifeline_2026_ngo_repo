@@ -41,44 +41,14 @@ fun DashboardScreen(
     val caseCount by viewModel.caseCount.collectAsState()
     val recentCases by viewModel.recentCases.collectAsState()
 
-    Scaffold(
-        bottomBar = {
-            NavigationBar(
-                containerColor = Color.White,
-                contentColor = primaryBlue
-            ) {
-                NavigationBarItem(
-                    selected = true,
-                    onClick = { /* Stay on home */ },
-                    icon = { Icon(Icons.Filled.Home, contentDescription = "Home") },
-                    label = { Text("Home") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onNavigateToRecords,
-                    icon = { Icon(Icons.Outlined.Description, contentDescription = "Records") },
-                    label = { Text("Records") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = { /* TODO: Sync */ },
-                    icon = { Icon(Icons.Filled.Sync, contentDescription = "Sync") },
-                    label = { Text("Sync") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = { /* TODO: Profile */ },
-                    icon = { Icon(Icons.Outlined.Person, contentDescription = "Profile") },
-                    label = { Text("Profile") }
-                )
-            }
-        }
-    ) { paddingValues ->
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF5F7FA))
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .background(Color(0xFFF5F7FA)) // Light Grey Background
                 .padding(16.dp)
         ) {
             // Header
