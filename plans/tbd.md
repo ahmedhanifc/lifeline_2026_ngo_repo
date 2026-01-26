@@ -2,3 +2,4 @@
 - Offline Login
 - Profile
 - NFC
+- Proper setup of collections on firebase

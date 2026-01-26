@@ -2,6 +2,8 @@ package com.example.responderapp.di
 
 import com.example.responderapp.data.repository.PregnancyCaseRepository
 import com.example.responderapp.data.repository.PregnancyCaseRepositoryImpl
+import com.example.responderapp.data.repository.FeedbackRepository
+import com.example.responderapp.data.repository.FeedbackRepositoryImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -17,4 +19,10 @@ abstract class RepositoryModule {
     abstract fun bindPregnancyCaseRepository(
         impl: PregnancyCaseRepositoryImpl
     ): PregnancyCaseRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindFeedbackRepository(
+        impl: FeedbackRepositoryImpl
+    ): FeedbackRepository
 }
