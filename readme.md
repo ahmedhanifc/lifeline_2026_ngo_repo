@@ -61,3 +61,7 @@ For development and debugging, you can connect a physical Android device using A
 
 ```bash
 adb devices
+
+# Account Information
+test@yopmail.com
+123456
