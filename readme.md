@@ -44,15 +44,6 @@ The application uses a dual-layer storage approach. Locally, data is stored on t
 
 The database structure organizes users, cases, checkups, distress events, and assignments in a hierarchical format that mirrors the application’s data model and supports incremental updates.
 
-### Firestore Structure
-
-- `/users/{userId}`
-- `/cases/{caseId}`
-- `/cases/{caseId}/checkups/{noteId}`
-- `/cases/{caseId}/distress/{eventId}`
-- `/assignments/{assignmentId}`
-
-The `assignments` documents include fields such as `caseId`, `responderId`, and `isActive`.
 
 ## Running and Testing
 
