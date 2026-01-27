@@ -16,10 +16,13 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -27,6 +30,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import com.example.responderapp.MainActivity
+import com.example.responderapp.data.nfc.NfcManager
+import com.example.responderapp.ui.components.NfcReadDialog
 import com.example.responderapp.ui.records.StatusBadge
 import com.example.responderapp.data.model.PatientRecord
 
@@ -42,6 +48,37 @@ fun DashboardScreen(
     val caseCount by viewModel.caseCount.collectAsState()
     val recentCases by viewModel.recentCases.collectAsState()
     val syncState by viewModel.syncState.collectAsState()
+    val nfcReadState by viewModel.nfcReadState.collectAsState()
+    
+    val context = LocalContext.current
+    val mainActivity = remember(context) {
+        if (context is MainActivity) context else null
+    }
+    
+    // Register NFC callback when dialog is shown and reading is in progress
+    LaunchedEffect(nfcReadState.showNfcReadDialog, nfcReadState.nfcReadInProgress) {
+        if (nfcReadState.showNfcReadDialog && nfcReadState.nfcReadInProgress && mainActivity != null) {
+            // Check NFC availability
+            val nfcAdapter = mainActivity.getNfcAdapter()
+            val nfcManager = viewModel.getNfcManager()
+            
+            if (nfcManager.isNfcAvailable(nfcAdapter)) {
+                if (nfcManager.isNfcEnabled(nfcAdapter)) {
+                    mainActivity.setNfcTagCallback { tag ->
+                        viewModel.onNfcReadEvent(NfcReadEvent.OnNfcTagDetected(tag))
+                    }
+                } else {
+                    // NFC not enabled - update state with error
+                    viewModel.onNfcReadEvent(NfcReadEvent.OnNfcTagDetected(null))
+                }
+            } else {
+                // NFC not available - update state with error
+                viewModel.onNfcReadEvent(NfcReadEvent.OnNfcTagDetected(null))
+            }
+        } else if (!nfcReadState.showNfcReadDialog && mainActivity != null) {
+            mainActivity.setNfcTagCallback(null)
+        }
+    }
 
     if (syncState is SyncState.Error) {
         AlertDialog(
@@ -119,7 +156,9 @@ fun DashboardScreen(
 
             val features = listOf(
                 DashboardFeature("My Records", "$caseCount Local", Icons.Outlined.Folder, primaryBlue, onNavigateToRecords),
-                DashboardFeature("Scan Tag", "NFC Read", Icons.Outlined.Nfc, Color(0xFFE91E63)) {},
+                DashboardFeature("Scan Tag", "NFC Read", Icons.Outlined.Nfc, Color(0xFFE91E63)) {
+                    viewModel.onNfcReadEvent(NfcReadEvent.StartNfcRead)
+                },
                 DashboardFeature("New Case", "Create", Icons.Filled.Add, Color(0xFF4CAF50), onNavigateToAddCase),
                 if (syncState is SyncState.Syncing) {
                     DashboardFeature("Syncing...", "Please wait", Icons.Filled.CloudSync, Color.Gray) {}
@@ -183,6 +222,21 @@ fun DashboardScreen(
                 }
             }
         }
+    }
+    
+    // Show NFC read dialog
+    if (nfcReadState.showNfcReadDialog) {
+        NfcReadDialog(
+            isReading = nfcReadState.nfcReadInProgress,
+            readData = nfcReadState.nfcReadData,
+            errorMessage = nfcReadState.nfcReadError,
+            onDismiss = {
+                viewModel.onNfcReadEvent(NfcReadEvent.DismissNfcReadDialog)
+            },
+            onCancel = {
+                viewModel.onNfcReadEvent(NfcReadEvent.DismissNfcReadDialog)
+            }
+        )
     }
 }
 

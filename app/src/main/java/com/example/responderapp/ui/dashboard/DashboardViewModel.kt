@@ -1,10 +1,14 @@
 package com.example.responderapp.ui.dashboard
 
+import android.nfc.Tag
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.responderapp.data.model.NfcCaseData
+import com.example.responderapp.data.nfc.NfcManager
 import com.example.responderapp.data.repository.PregnancyCaseRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import com.example.responderapp.data.model.PatientRecord
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -12,11 +16,13 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
-    private val repository: PregnancyCaseRepository
+    private val repository: PregnancyCaseRepository,
+    private val nfcManager: NfcManager
 ) : ViewModel() {
 
     // Real count from the database
@@ -42,6 +48,10 @@ class DashboardViewModel @Inject constructor(
     private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
     val syncState = _syncState.asStateFlow()
 
+    // NFC Read state
+    private val _nfcReadState = MutableStateFlow(NfcReadState())
+    val nfcReadState = _nfcReadState.asStateFlow()
+
     fun syncData() {
         viewModelScope.launch {
             _syncState.value = SyncState.Syncing
@@ -61,6 +71,69 @@ class DashboardViewModel @Inject constructor(
     fun resetSyncState() {
         _syncState.value = SyncState.Idle
     }
+
+    fun onNfcReadEvent(event: NfcReadEvent) {
+        when (event) {
+            is NfcReadEvent.StartNfcRead -> {
+                _nfcReadState.value = NfcReadState(
+                    showNfcReadDialog = true,
+                    nfcReadInProgress = true,
+                    nfcReadData = null,
+                    nfcReadError = null
+                )
+            }
+            is NfcReadEvent.DismissNfcReadDialog -> {
+                _nfcReadState.value = NfcReadState()
+            }
+            is NfcReadEvent.OnNfcTagDetected -> {
+                if (event.tag != null) {
+                    handleNfcTagDetected(event.tag)
+                } else {
+                    // Handle NFC not available/enabled error
+                    _nfcReadState.value = _nfcReadState.value.copy(
+                        nfcReadInProgress = false,
+                        nfcReadError = "NFC is not available or not enabled on this device. Please enable NFC in settings."
+                    )
+                }
+            }
+        }
+    }
+
+    private fun handleNfcTagDetected(tag: Tag) {
+        val state = _nfcReadState.value
+        if (!state.nfcReadInProgress) {
+            return
+        }
+
+        viewModelScope.launch {
+            val readData = withContext(Dispatchers.IO) {
+                nfcManager.readFromTag(tag)
+            }
+
+            _nfcReadState.value = _nfcReadState.value.copy(
+                nfcReadInProgress = false,
+                nfcReadData = readData,
+                nfcReadError = if (readData == null) {
+                    "Failed to read medical record from NFC tag. The tag may not contain valid data or may be corrupted."
+                } else null
+            )
+        }
+    }
+    
+    fun getNfcManager(): NfcManager = nfcManager
+}
+
+data class NfcReadState(
+    val showNfcReadDialog: Boolean = false,
+    val nfcReadInProgress: Boolean = false,
+    val nfcReadData: NfcCaseData? = null,
+    val nfcReadError: String? = null
+)
+
+sealed class NfcReadEvent {
+    object StartNfcRead : NfcReadEvent()
+    object DismissNfcReadDialog : NfcReadEvent()
+    data class OnNfcTagDetected(val tag: Tag?) : NfcReadEvent()
 }
 
 sealed class SyncState {
