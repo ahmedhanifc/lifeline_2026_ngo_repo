@@ -49,6 +49,14 @@ The database structure organizes users, cases, checkups, distress events, and as
 
 The application is developed and run using Android Studio.
 
+## License
+
+This project is released under the MIT License.  
+You are free to use, modify, and distribute this software for academic, non-commercial, and commercial purposes, provided that the original copyright notice and license text are included in all copies or substantial portions of the software.
+
+See the `LICENSE` file in this repository for the full license text.
+
+
 For development and debugging, you can connect a physical Android device using ADB:
 
 ```bash
