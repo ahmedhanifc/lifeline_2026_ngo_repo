@@ -22,7 +22,8 @@ import javax.inject.Inject
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
     private val repository: PregnancyCaseRepository,
-    private val nfcManager: NfcManager
+    private val nfcManager: NfcManager,
+    private val meshtasticManager: com.example.responderapp.data.meshtastic.MeshtasticManager
 ) : ViewModel() {
 
     // Real count from the database
@@ -51,6 +52,10 @@ class DashboardViewModel @Inject constructor(
     // NFC Read state
     private val _nfcReadState = MutableStateFlow(NfcReadState())
     val nfcReadState = _nfcReadState.asStateFlow()
+
+    // Meshtastic SOS state
+    private val _meshtasticSOS = MutableStateFlow<com.example.responderapp.data.meshtastic.MeshtasticSOS?>(null)
+    val meshtasticSOS = _meshtasticSOS.asStateFlow()
 
     fun syncData() {
         viewModelScope.launch {
@@ -118,6 +123,15 @@ class DashboardViewModel @Inject constructor(
                 } else null
             )
         }
+    }
+
+    fun simulateMeshtasticSOS(message: String = "SOS - Caretaker device | Location: 25.353377495848672, 51.48658307453243") {
+        val sos = meshtasticManager.parseSOSMessage(message)
+        _meshtasticSOS.value = sos
+    }
+
+    fun clearMeshtasticSOS() {
+        _meshtasticSOS.value = null
     }
     
     fun getNfcManager(): NfcManager = nfcManager

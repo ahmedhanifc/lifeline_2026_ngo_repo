@@ -159,7 +159,12 @@ fun DashboardScreen(
                 DashboardFeature("Scan Tag", "NFC Read", Icons.Outlined.Nfc, Color(0xFFE91E63)) {
                     viewModel.onNfcReadEvent(NfcReadEvent.StartNfcRead)
                 },
-                DashboardFeature("New Case", "Create", Icons.Filled.Add, Color(0xFF4CAF50), onNavigateToAddCase)
+                DashboardFeature("New Case", "Create", Icons.Filled.Add, Color(0xFF4CAF50), onNavigateToAddCase),
+                if (syncState is SyncState.Syncing) {
+                    DashboardFeature("Syncing...", "Please wait", Icons.Filled.CloudSync, Color.Gray) {}
+                } else {
+                    DashboardFeature("Sync Data", "Upload", Icons.Filled.CloudUpload, Color(0xFFFF9800)) { viewModel.syncData() }
+                }
             )
 
             LazyVerticalGrid(

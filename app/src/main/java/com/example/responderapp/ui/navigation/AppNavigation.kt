@@ -1,9 +1,6 @@
 package com.example.responderapp.ui.navigation
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.ui.Alignment
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.outlined.Description
@@ -35,7 +32,6 @@ sealed class Screen(val route: String, val label: String = "", val icon: android
     object EditCase : Screen("edit_case/{caseId}") {
         fun createRoute(caseId: String) = "edit_case/$caseId"
     }
-    // Placeholders for Sync and Profile - REMOVED
 }
 
 @Composable
