@@ -41,6 +41,7 @@ import com.example.responderapp.data.model.PatientRecord
 fun DashboardScreen(
     onNavigateToAddCase: () -> Unit,
     onNavigateToRecords: () -> Unit,
+    onNavigateToBleConnection: () -> Unit = {},
     onNavigateToDetail: (String) -> Unit = {},
     viewModel: DashboardViewModel = hiltViewModel()
 ) {

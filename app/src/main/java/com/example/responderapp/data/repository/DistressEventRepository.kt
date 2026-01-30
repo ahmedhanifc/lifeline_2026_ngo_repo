@@ -1,0 +1,170 @@
+package com.example.responderapp.data.repository
+
+import com.example.responderapp.data.ble.BleConnectionState
+import com.example.responderapp.data.ble.BleDevice
+import com.example.responderapp.data.ble.MeshtasticBleClient
+import com.example.responderapp.data.local.dao.DistressEventDao
+import com.example.responderapp.data.local.entity.DistressEventEntity
+import com.example.responderapp.data.meshtastic.MeshtasticManager
+import com.example.responderapp.data.meshtastic.MeshtasticSOS
+import com.geeksville.mesh.MeshProtos.MeshPacket
+import com.geeksville.mesh.Portnums.PortNum
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+import javax.inject.Singleton
+
+/**
+ * Repository for managing Meshtastic BLE connection and distress events.
+ * 
+ * Bridges the BLE client with the database, processing incoming packets
+ * and storing distress events.
+ */
+@Singleton
+class DistressEventRepository @Inject constructor(
+    private val bleClient: MeshtasticBleClient,
+    private val distressEventDao: DistressEventDao,
+    private val meshtasticManager: MeshtasticManager
+) {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    
+    private val _newDistressEvent = MutableSharedFlow<DistressEventEntity>(extraBufferCapacity = 16)
+    val newDistressEvent: SharedFlow<DistressEventEntity> = _newDistressEvent.asSharedFlow()
+    
+    init {
+        // Listen to incoming packets and process them
+        scope.launch {
+            bleClient.incomingPackets.collect { packet ->
+                processPacket(packet)
+            }
+        }
+    }
+    
+    /**
+     * BLE connection state
+     */
+    val connectionState: StateFlow<BleConnectionState> = bleClient.connectionState
+    
+    /**
+     * Discovered BLE devices during scan
+     */
+    val discoveredDevices: StateFlow<List<BleDevice>> = bleClient.discoveredDevices
+    
+    /**
+     * Check if Bluetooth is enabled
+     */
+    fun isBluetoothEnabled(): Boolean = bleClient.isBluetoothEnabled()
+    
+    /**
+     * Start scanning for BLE devices
+     */
+    fun startScan() = bleClient.startScan()
+    
+    /**
+     * Stop scanning for BLE devices
+     */
+    fun stopScan() = bleClient.stopScan()
+    
+    /**
+     * Connect to a BLE device
+     */
+    fun connect(device: BleDevice) = bleClient.connect(device)
+    
+    /**
+     * Disconnect from current device
+     */
+    fun disconnect() = bleClient.disconnect()
+    
+    /**
+     * Get all distress events
+     */
+    fun getAllEvents(): Flow<List<DistressEventEntity>> = distressEventDao.getAllEvents()
+    
+    /**
+     * Get unacknowledged distress events
+     */
+    fun getUnacknowledgedEvents(): Flow<List<DistressEventEntity>> = 
+        distressEventDao.getUnacknowledgedEvents()
+    
+    /**
+     * Get count of unacknowledged events
+     */
+    fun getUnacknowledgedCount(): Flow<Int> = distressEventDao.getUnacknowledgedCount()
+    
+    /**
+     * Get most recent unacknowledged event
+     */
+    fun getMostRecentUnacknowledged(): Flow<DistressEventEntity?> = 
+        distressEventDao.getMostRecentUnacknowledged()
+    
+    /**
+     * Acknowledge a distress event
+     */
+    suspend fun acknowledgeEvent(eventId: Long) = distressEventDao.acknowledge(eventId)
+    
+    /**
+     * Process an incoming MeshPacket
+     */
+    private suspend fun processPacket(packet: MeshPacket) {
+        // Check if it's a text message
+        if (!packet.hasDecoded()) return
+        
+        val data = packet.decoded
+        if (data.portnum != PortNum.TEXT_MESSAGE_APP) return
+        
+        // Try to decode the payload as UTF-8 text
+        val payloadText = try {
+            data.payload.toStringUtf8()
+        } catch (e: Exception) {
+            return
+        }
+        
+        // Try to parse as SOS message
+        val sos = meshtasticManager.parseSOSMessage(payloadText) ?: return
+        
+        // Create and store distress event
+        val event = DistressEventEntity(
+            fromNodeId = packet.from.toLong(),
+            receivedAt = System.currentTimeMillis(),
+            latitude = sos.latitude,
+            longitude = sos.longitude,
+            rawText = payloadText,
+            rssi = packet.rxRssi.takeIf { it != 0 },
+            snr = packet.rxSnr.takeIf { it != 0f }
+        )
+        
+        val insertedId = distressEventDao.insert(event)
+        val insertedEvent = event.copy(id = insertedId)
+        
+        // Emit for real-time updates
+        _newDistressEvent.emit(insertedEvent)
+    }
+    
+    /**
+     * Manually simulate an SOS for testing (remove in production)
+     */
+    suspend fun simulateSOS(message: String = "SOS - Caretaker device | Location: 25.353377495848672, 51.48658307453243") {
+        val sos = meshtasticManager.parseSOSMessage(message) ?: return
+        
+        val event = DistressEventEntity(
+            fromNodeId = 0xDEADBEEF,
+            receivedAt = System.currentTimeMillis(),
+            latitude = sos.latitude,
+            longitude = sos.longitude,
+            rawText = message,
+            rssi = -65,
+            snr = 8.5f
+        )
+        
+        val insertedId = distressEventDao.insert(event)
+        val insertedEvent = event.copy(id = insertedId)
+        _newDistressEvent.emit(insertedEvent)
+    }
+}

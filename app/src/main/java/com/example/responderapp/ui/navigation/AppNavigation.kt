@@ -2,6 +2,7 @@ package com.example.responderapp.ui.navigation
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material3.*
@@ -14,6 +15,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.responderapp.ui.ble.BleConnectionScreen
 import com.example.responderapp.ui.dashboard.DashboardScreen
 import com.example.responderapp.ui.login.LoginScreen
 import com.example.responderapp.ui.cases.AddCaseScreen
@@ -26,6 +28,7 @@ sealed class Screen(val route: String, val label: String = "", val icon: android
     object Dashboard : Screen("dashboard", "Home", Icons.Default.Home)
     object AddCase : Screen("add_case")
     object Records : Screen("records", "Records", Icons.Outlined.Description)
+    object BleConnection : Screen("ble_connection", "Radio", Icons.Default.Bluetooth)
     object PatientDetail : Screen("patient_detail/{caseId}") {
         fun createRoute(caseId: String) = "patient_detail/$caseId"
     }
@@ -42,7 +45,8 @@ fun AppNavigation() {
 
     val mainItems = listOf(
         Screen.Dashboard,
-        Screen.Records
+        Screen.Records,
+        Screen.BleConnection
     )
 
     val showBottomBar = currentDestination?.route in mainItems.map { it.route }
@@ -105,9 +109,16 @@ fun AppNavigation() {
                 DashboardScreen(
                     onNavigateToAddCase = { navController.navigate(Screen.AddCase.route) },
                     onNavigateToRecords = { navController.navigate(Screen.Records.route) },
+                    onNavigateToBleConnection = { navController.navigate(Screen.BleConnection.route) },
                     onNavigateToDetail = { caseId -> 
                         navController.navigate(Screen.PatientDetail.createRoute(caseId))
                     }
+                )
+            }
+
+            composable(Screen.BleConnection.route) {
+                BleConnectionScreen(
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
 

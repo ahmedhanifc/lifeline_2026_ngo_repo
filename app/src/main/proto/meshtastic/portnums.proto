@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+package meshtastic;
+
+option java_package = "com.geeksville.mesh";
+option java_outer_classname = "Portnums";
+option optimize_for = LITE_RUNTIME;
+
+/**
+ * For any new 'apps' that run on the device or via sister apps on phones/PCs they should pick and use a
+ * unique 'portnum' for their application.
+ */
+enum PortNum {
+  /**
+   * Deprecated: do not use in new code 
+   */
+  UNKNOWN_APP = 0;
+
+  /**
+   * A message sent from a meshtastic device to request a position from a node (or all nodes)
+   */
+  TEXT_MESSAGE_APP = 1;
+
+  /**
+   * A GPS position message (similar to a text message but decoded with the position protobuf)
+   */
+  POSITION_APP = 3;
+
+  /**
+   * A node info message
+   */
+  NODEINFO_APP = 4;
+
+  /**
+   * Routing control messages
+   */
+  ROUTING_APP = 5;
+
+  /**
+   * Admin messages
+   */
+  ADMIN_APP = 6;
+
+  /**
+   * Text message compressed with smaz
+   */
+  TEXT_MESSAGE_COMPRESSED_APP = 7;
+
+  /**
+   * Waypoint updates
+   */
+  WAYPOINT_APP = 8;
+
+  /**
+   * Audio data
+   */
+  AUDIO_APP = 9;
+
+  /**
+   * Detection sensor
+   */
+  DETECTION_SENSOR_APP = 10;
+
+  /**
+   * Private application ports. Use values >= 256.
+   */
+  PRIVATE_APP = 256;
+
+  /**
+   * Maximum port number
+   */
+  MAX = 511;
+}

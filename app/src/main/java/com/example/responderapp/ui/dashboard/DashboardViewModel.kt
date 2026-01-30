@@ -8,6 +8,9 @@ import com.example.responderapp.data.nfc.NfcManager
 import com.example.responderapp.data.repository.PregnancyCaseRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import com.example.responderapp.data.model.PatientRecord
+import com.example.responderapp.data.meshtastic.MeshtasticManager
+import com.example.responderapp.data.meshtastic.MeshtasticSOS
+
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -23,7 +26,8 @@ import javax.inject.Inject
 class DashboardViewModel @Inject constructor(
     private val repository: PregnancyCaseRepository,
     private val nfcManager: NfcManager,
-    private val meshtasticManager: com.example.responderapp.data.meshtastic.MeshtasticManager
+    private val meshtasticManager: MeshtasticManager
+
 ) : ViewModel() {
 
     // Real count from the database
@@ -54,7 +58,8 @@ class DashboardViewModel @Inject constructor(
     val nfcReadState = _nfcReadState.asStateFlow()
 
     // Meshtastic SOS state
-    private val _meshtasticSOS = MutableStateFlow<com.example.responderapp.data.meshtastic.MeshtasticSOS?>(null)
+    private val _meshtasticSOS = MutableStateFlow<MeshtasticSOS?>(null)
+
     val meshtasticSOS = _meshtasticSOS.asStateFlow()
 
     fun syncData() {

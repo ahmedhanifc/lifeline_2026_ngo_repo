@@ -1,0 +1,423 @@
+syntax = "proto3";
+
+package meshtastic;
+
+option java_package = "com.geeksville.mesh";
+option java_outer_classname = "MeshProtos";
+option optimize_for = LITE_RUNTIME;
+
+import "meshtastic/portnums.proto";
+
+/**
+ * A position update message
+ */
+message Position {
+  /**
+   * Latitude (degrees x 1e-7)
+   */
+  sfixed32 latitude_i = 1;
+
+  /**
+   * Longitude (degrees x 1e-7)  
+   */
+  sfixed32 longitude_i = 2;
+
+  /**
+   * Altitude in meters above MSL
+   */
+  int32 altitude = 3;
+
+  /**
+   * Time the position was taken (secs since Unix epoch)
+   */
+  fixed32 time = 4;
+
+  /**
+   * GPS precision metric
+   */
+  uint32 PDOP = 5;
+
+  /**
+   * Ground speed in m/s
+   */
+  uint32 ground_speed = 6;
+
+  /**
+   * Heading in degrees (0-360)
+   */
+  uint32 ground_track = 7;
+
+  /**
+   * Number of satellites used
+   */
+  uint32 sats_in_view = 8;
+}
+
+/**
+ * User info message
+ */
+message User {
+  /**
+   * User ID (node number as hex string, like !12345678)
+   */
+  string id = 1;
+
+  /**
+   * Long name for user  
+   */
+  string long_name = 2;
+
+  /**
+   * Short name for user (4 chars max)
+   */
+  string short_name = 3;
+
+  /**
+   * Hardware model type
+   */
+  int32 hw_model = 5;
+
+  /**
+   * Is this node licensed?
+   */  
+  bool is_licensed = 6;
+}
+
+/**
+ * A node info message
+ */
+message NodeInfo {
+  /**
+   * The node number
+   */
+  uint32 num = 1;
+
+  /**
+   * User info for this node
+   */
+  User user = 2;
+
+  /**
+   * Last known position
+   */
+  Position position = 3;
+
+  /**
+   * SNR from last received packet
+   */
+  float snr = 4;
+
+  /**
+   * Seconds since last heard from this node
+   */
+  uint32 last_heard = 5;
+
+  /**
+   * Device metrics
+   */
+  DeviceMetrics device_metrics = 6;
+}
+
+/**
+ * Device metrics
+ */
+message DeviceMetrics {
+  /**
+   * Battery level (0-100) 
+   */
+  uint32 battery_level = 1;
+
+  /**
+   * Voltage
+   */
+  float voltage = 2;
+
+  /**
+   * Channel utilization %
+   */
+  float channel_utilization = 3;
+
+  /**
+   * Airtime utilization %
+   */
+  float air_util_tx = 4;
+}
+
+/**
+ * The data payload of a MeshPacket
+ */
+message Data {
+  /**
+   * Port number for this payload
+   */
+  PortNum portnum = 1;
+
+  /**
+   * The actual payload bytes
+   */
+  bytes payload = 2;
+
+  /**
+   * If true, this message wants an ack
+   */
+  bool want_response = 3;
+
+  /**
+   * Destination node for directed messages
+   */
+  fixed32 dest = 4;
+
+  /**
+   * Source node (set by sending node)
+   */
+  fixed32 source = 5;
+
+  /**
+   * Request ID for tracking
+   */
+  uint32 request_id = 6;
+
+  /**
+   * Reply ID if this is a response
+   */  
+  uint32 reply_id = 7;
+
+  /**
+   * Emoji character (Unicode)
+   */
+  fixed32 emoji = 8;
+}
+
+/**
+ * A packet on the mesh
+ */
+message MeshPacket {
+  /**
+   * Sender node number
+   */
+  fixed32 from = 1;
+
+  /**
+   * Destination node number (0xffffffff = broadcast)
+   */
+  fixed32 to = 2;
+
+  /**
+   * Channel this packet was sent/received on
+   */
+  uint32 channel = 3;
+
+  /**
+   * Decrypted packet data (if we could decode it)
+   */
+  Data decoded = 4;
+
+  /**
+   * Encrypted payload (if we couldn't decode it)
+   */
+  bytes encrypted = 5;
+
+  /**
+   * Unique ID for this packet
+   */
+  fixed32 id = 6;
+
+  /**
+   * Time packet was received (epoch secs)
+   */
+  fixed32 rx_time = 7;
+
+  /**
+   * Receive signal strength for packet
+   */
+  float rx_snr = 8;
+
+  /**
+   * Hop limit for this packet
+   */
+  uint32 hop_limit = 9;
+
+  /**
+   * Want an ack for this packet
+   */
+  bool want_ack = 10;
+
+  /**
+   * Packet priority for queue
+   */  
+  uint32 priority = 11;
+
+  /**
+   * RSSI of received packet
+   */
+  int32 rx_rssi = 12;
+
+  /**
+   * Is this a delayed/stored message?
+   */
+  bool delayed = 13;
+}
+
+/**
+ * Sent from phone to radio
+ */
+message ToRadio {
+  oneof payload_variant {
+    /**
+     * Packet to send over mesh
+     */
+    MeshPacket packet = 1;
+
+    /**
+     * Request config/nodedb from radio
+     */
+    bool want_config_id = 3;
+
+    /**
+     * Disconnect cleanly
+     */
+    bool disconnect = 4;
+  }
+}
+
+/**
+ * Sent from radio to phone
+ */
+message FromRadio {
+  /**
+   * Packet ID for tracking
+   */
+  uint32 id = 1;
+
+  oneof payload_variant {
+    /**
+     * Received mesh packet
+     */
+    MeshPacket packet = 2;
+
+    /**
+     * My node info
+     */
+    MyNodeInfo my_info = 3;
+
+    /**
+     * A node in the mesh
+     */
+    NodeInfo node_info = 4;
+
+    /**
+     * Config complete indicator
+     */
+    bool config_complete_id = 5;
+
+    /**
+     * Rebooting indicator
+     */
+    bool rebooted = 6;
+
+    /**
+     * Channel info
+     */
+    Channel channel = 8;
+
+    /**
+     * Module config
+     */
+    bytes moduleConfig = 9;
+
+    /**
+     * Queue status
+     */
+    QueueStatus queueStatus = 10;
+  }
+}
+
+/**
+ * My node info
+ */
+message MyNodeInfo {
+  /**
+   * My node number
+   */
+  uint32 my_node_num = 1;
+
+  /**
+   * Firmware version string
+   */
+  string firmware_version = 6;
+
+  /**
+   * Device reboot count
+   */
+  uint32 reboot_count = 8;
+
+  /**
+   * Min app version required
+   */
+  uint32 min_app_version = 11;
+}
+
+/**
+ * Channel settings
+ */
+message ChannelSettings {
+  /**
+   * Channel number (0-based)
+   */
+  uint32 channel_num = 1;
+
+  /**
+   * PSK for this channel
+   */
+  bytes psk = 2;
+
+  /**
+   * Channel name
+   */
+  string name = 3;
+}
+
+/**
+ * A channel configuration
+ */
+message Channel {
+  /**
+   * Channel index
+   */
+  uint32 index = 1;
+
+  /**
+   * Channel settings
+   */
+  ChannelSettings settings = 2;
+
+  /**
+   * Role of this channel
+   */
+  uint32 role = 3;
+}
+
+/**
+ * Queue status for packet transmission
+ */
+message QueueStatus {
+  /**
+   * Packets in transmit queue
+   */
+  int32 res = 1;
+
+  /**
+   * Free slots in queue 
+   */
+  uint32 free = 2;
+
+  /**
+   * Max queue size
+   */
+  uint32 maxlen = 3;
+
+  /**
+   * Request ID that triggered this response
+   */
+  uint32 mesh_packet_id = 4;
+}
