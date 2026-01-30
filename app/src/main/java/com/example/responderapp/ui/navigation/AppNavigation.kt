@@ -6,9 +6,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Alignment
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.outlined.Description
-import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -37,9 +35,7 @@ sealed class Screen(val route: String, val label: String = "", val icon: android
     object EditCase : Screen("edit_case/{caseId}") {
         fun createRoute(caseId: String) = "edit_case/$caseId"
     }
-    // Placeholders for Sync and Profile
-    object Sync : Screen("sync", "Sync", Icons.Default.Sync)
-    object Profile : Screen("profile", "Profile", Icons.Outlined.Person)
+    // Placeholders for Sync and Profile - REMOVED
 }
 
 @Composable
@@ -50,9 +46,7 @@ fun AppNavigation() {
 
     val mainItems = listOf(
         Screen.Dashboard,
-        Screen.Records,
-        Screen.Sync,
-        Screen.Profile
+        Screen.Records
     )
 
     val showBottomBar = currentDestination?.route in mainItems.map { it.route }
@@ -169,18 +163,6 @@ fun AppNavigation() {
                         navController.popBackStack()
                     }
                 )
-            }
-            
-            // Placeholder routes for Sync and Profile
-            composable(Screen.Sync.route) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Sync Screen Placeholder")
-                }
-            }
-            composable(Screen.Profile.route) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Profile Screen Placeholder")
-                }
             }
         }
     }
