@@ -5,6 +5,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Nfc
 import androidx.compose.material3.*
@@ -28,7 +29,8 @@ fun NfcReadDialog(
     readData: NfcCaseData?,
     errorMessage: String?,
     onDismiss: () -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
+    onUpdate: (() -> Unit)? = null
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -84,19 +86,7 @@ fun NfcReadDialog(
                                     value = readData.pregnancyStage
                                 )
                                 
-                                if (!readData.allergies.isNullOrBlank()) {
-                                    MedicalRecordField(
-                                        label = "Allergies",
-                                        value = readData.allergies
-                                    )
-                                }
-                                
-                                if (!readData.keyRisks.isNullOrBlank()) {
-                                    MedicalRecordField(
-                                        label = "Key Risks",
-                                        value = readData.keyRisks
-                                    )
-                                }
+
                                 
                                 if (!readData.lastCheckupSummary.isNullOrBlank()) {
                                     MedicalRecordField(
@@ -170,13 +160,26 @@ fun NfcReadDialog(
         },
         confirmButton = {
             when {
-                readData != null || errorMessage != null -> {
-                    Button(onClick = onDismiss) {
-                        Text(if (readData != null) "Close" else "OK")
+                readData != null -> {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (onUpdate != null) {
+                            Button(onClick = onUpdate) {
+                                Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Update")
+                            }
+                        }
+                        TextButton(onClick = onDismiss) {
+                            Text("Close")
+                        }
                     }
                 }
-                else -> {
-                    // No confirm button when waiting
+                errorMessage != null -> {
+                    TextButton(onClick = onDismiss) {
+                        Text("OK")
+                    }
                 }
             }
         },

@@ -110,15 +110,6 @@ class BleConnectionViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Simulate an SOS for testing purposes
-     */
-    fun simulateSOS() {
-        viewModelScope.launch {
-            repository.simulateSOS()
-        }
-    }
-
     fun setShowPermissionDialog(show: Boolean) {
         _showPermissionDialog.value = show
     }

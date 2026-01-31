@@ -10,5 +10,7 @@ import kotlinx.parcelize.Parcelize
 data class MeshtasticSOS(
     val latitude: Double,
     val longitude: Double,
+    val userName: String? = null,
+    val userId: String? = null,
     val timestamp: Long = System.currentTimeMillis()
 ) : Parcelable

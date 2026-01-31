@@ -21,9 +21,12 @@ class MeshtasticManager @Inject constructor() {
             // Check if it's an SOS message
             if (!message.startsWith("SOS", ignoreCase = true)) return null
 
-            // Try format 1: "SOS - Caretaker device | Location: lat, lon"
             if (message.contains("Location:")) {
-                return parseLocationFormat(message)
+                val sos = parseLocationFormat(message)
+                return sos?.copy(
+                    userName = extractValue(message, "User:"),
+                    userId = extractValue(message, "ID:")
+                )
             }
 
             // Try format 2: "SOS|lat=...|lon=..."
@@ -92,6 +95,26 @@ class MeshtasticManager @Inject constructor() {
      */
     private fun validateCoordinates(lat: Double, lon: Double): Boolean {
         return lat in -90.0..90.0 && lon in -180.0..180.0
+    }
+
+    /**
+     * Extract value for a key like "Key: Value" or "Key=Value"
+     * Stops at pipe or end of string.
+     */
+    private fun extractValue(message: String, key: String): String? {
+        val idx = message.indexOf(key)
+        if (idx == -1) return null
+        
+        val start = idx + key.length
+        val endPipe = message.indexOf("|", start)
+        
+        val value = if (endPipe != -1) {
+            message.substring(start, endPipe)
+        } else {
+            message.substring(start)
+        }
+        
+        return value.trim().takeIf { it.isNotEmpty() }
     }
 }
 

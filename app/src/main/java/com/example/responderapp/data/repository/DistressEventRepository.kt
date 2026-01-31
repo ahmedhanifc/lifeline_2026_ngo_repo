@@ -165,6 +165,8 @@ class DistressEventRepository @Inject constructor(
             receivedAt = System.currentTimeMillis(),
             latitude = sos.latitude,
             longitude = sos.longitude,
+            userName = sos.userName,
+            userId = sos.userId,
             rawText = payloadText,
             rssi = packet.rxRssi.takeIf { it != 0 },
             snr = packet.rxSnr.takeIf { it != 0f }
@@ -178,27 +180,6 @@ class DistressEventRepository @Inject constructor(
         // Emit for real-time updates
         _newDistressEvent.emit(insertedEvent)
         Log.d(TAG, "📢 SOS event emitted to UI")
-    }
-    
-    /**
-     * Manually simulate an SOS for testing (remove in production)
-     */
-    suspend fun simulateSOS(message: String = "SOS - Caretaker device | Location: 25.353377495848672, 51.48658307453243") {
-        val sos = meshtasticManager.parseSOSMessage(message) ?: return
-        
-        val event = DistressEventEntity(
-            fromNodeId = 0xDEADBEEF,
-            receivedAt = System.currentTimeMillis(),
-            latitude = sos.latitude,
-            longitude = sos.longitude,
-            rawText = message,
-            rssi = -65,
-            snr = 8.5f
-        )
-        
-        val insertedId = distressEventDao.insert(event)
-        val insertedEvent = event.copy(id = insertedId)
-        _newDistressEvent.emit(insertedEvent)
     }
     
     companion object {

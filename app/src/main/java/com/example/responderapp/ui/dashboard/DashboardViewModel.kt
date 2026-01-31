@@ -9,13 +9,13 @@ import com.example.responderapp.data.repository.PregnancyCaseRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import com.example.responderapp.data.model.PatientRecord
 import com.example.responderapp.data.meshtastic.MeshtasticManager
-import com.example.responderapp.data.meshtastic.MeshtasticSOS
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -56,11 +56,6 @@ class DashboardViewModel @Inject constructor(
     // NFC Read state
     private val _nfcReadState = MutableStateFlow(NfcReadState())
     val nfcReadState = _nfcReadState.asStateFlow()
-
-    // Meshtastic SOS state
-    private val _meshtasticSOS = MutableStateFlow<MeshtasticSOS?>(null)
-
-    val meshtasticSOS = _meshtasticSOS.asStateFlow()
 
     fun syncData() {
         viewModelScope.launch {
@@ -109,6 +104,45 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Ensures the case exists in the local database. If not, imports it from the NFC data.
+     */
+    suspend fun ensureCaseExists(nfcData: NfcCaseData) {
+        val record = repository.getPatientRecordById(nfcData.caseId).first()
+            
+        if (record == null) {
+            val now = System.currentTimeMillis()
+            val master = com.example.responderapp.data.local.entity.PregnancyCaseEntity(
+                caseId = nfcData.caseId,
+                patientFullName = nfcData.patientFullName,
+                dateOfBirth = nfcData.dateOfBirth,
+                createdAt = now,
+                createdBy = "IMPORTED",
+                latestUpdateId = null,
+                isSynced = false
+            )
+            
+            val initialUpdate = com.example.responderapp.data.local.entity.CaseUpdateEntity(
+                updateId = java.util.UUID.randomUUID().toString(),
+                caseId = nfcData.caseId,
+                version = 1,
+                capturedAt = nfcData.lastCheckupAt ?: now,
+                updatedBy = "IMPORTED",
+                isSynced = false,
+                pregnancyStage = nfcData.pregnancyStage,
+                status = "ACTIVE",
+                allergies = null,
+                keyRisks = null,
+                clinicalNotes = nfcData.lastCheckupSummary,
+                mediaPath = null,
+                latitude = null,
+                longitude = null
+            )
+            
+            repository.createCase(master, initialUpdate)
+        }
+    }
+
     private fun handleNfcTagDetected(tag: Tag) {
         val state = _nfcReadState.value
         if (!state.nfcReadInProgress) {
@@ -128,15 +162,6 @@ class DashboardViewModel @Inject constructor(
                 } else null
             )
         }
-    }
-
-    fun simulateMeshtasticSOS(message: String = "SOS - Caretaker device | Location: 25.353377495848672, 51.48658307453243") {
-        val sos = meshtasticManager.parseSOSMessage(message)
-        _meshtasticSOS.value = sos
-    }
-
-    fun clearMeshtasticSOS() {
-        _meshtasticSOS.value = null
     }
     
     fun getNfcManager(): NfcManager = nfcManager

@@ -11,6 +11,10 @@ import android.nfc.tech.Ndef
 import android.nfc.tech.NdefFormatable
 import android.util.Log
 import com.example.responderapp.data.model.NfcCaseData
+import java.security.SecureRandom
+import javax.crypto.Cipher
+import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.SecretKeySpec
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -23,6 +27,14 @@ class NfcManager @Inject constructor() {
     companion object {
         private const val TAG = "NfcManager"
         private const val MIME_TYPE = "application/vnd.com.example.responderapp.case"
+        
+        // Encryption constants
+        private const val ALGORITHM = "AES/GCM/NoPadding"
+        private const val TAG_BIT_LENGTH = 128
+        private const val IV_SIZE = 12
+        // Hardcoded key for simplicity as requested. In production, use Android Keystore or user-derived key.
+        // 32 chars = 256 bits
+        private val SECRET_KEY_BYTES = "LifeLinesResponderAppSecretKey!!".toByteArray(Charsets.UTF_8)
     }
 
     /**
@@ -59,10 +71,9 @@ class NfcManager @Inject constructor() {
      */
     fun createNdefMessage(caseData: NfcCaseData): NdefMessage {
         val jsonString = caseData.toJson()
-        val mimeBytes = MIME_TYPE.toByteArray(Charsets.US_ASCII)
-        val payload = jsonString.toByteArray(Charsets.UTF_8)
+        val encryptedPayload = encrypt(jsonString)
         
-        val record = NdefRecord.createMime(MIME_TYPE, payload)
+        val record = NdefRecord.createMime(MIME_TYPE, encryptedPayload)
         return NdefMessage(arrayOf(record))
     }
 
@@ -123,9 +134,18 @@ class NfcManager @Inject constructor() {
                 if (record.tnf == NdefRecord.TNF_MIME_MEDIA) {
                     val mimeType = String(record.type, Charsets.US_ASCII)
                     if (mimeType == MIME_TYPE) {
-                        val payload = String(record.payload, Charsets.UTF_8)
-                        ndef.close()
-                        return NfcCaseData.fromJson(payload)
+                        return try {
+                            // Try to decrypt first (new format)
+                            val jsonString = decrypt(record.payload)
+                            ndef.close()
+                            NfcCaseData.fromJson(jsonString)
+                        } catch (e: Exception) {
+                            // Decryption failed, try plain text (legacy format)
+                            Log.w(TAG, "Failed to decrypt, trying plain text: ${e.message}")
+                            val payload = String(record.payload, Charsets.UTF_8)
+                            ndef.close()
+                            NfcCaseData.fromJson(payload)
+                        }
                     }
                 }
             }
@@ -135,6 +155,39 @@ class NfcManager @Inject constructor() {
             Log.e(TAG, "Error reading from NFC tag", e)
             null
         }
+    }
+
+    private fun encrypt(data: String): ByteArray {
+        val cipher = Cipher.getInstance(ALGORITHM)
+        val iv = ByteArray(IV_SIZE)
+        SecureRandom().nextBytes(iv)
+        val keySpec = SecretKeySpec(SECRET_KEY_BYTES, "AES")
+        val gcmSpec = GCMParameterSpec(TAG_BIT_LENGTH, iv)
+        cipher.init(Cipher.ENCRYPT_MODE, keySpec, gcmSpec)
+
+        val cipherText = cipher.doFinal(data.toByteArray(Charsets.UTF_8))
+
+        // Combine IV + CipherText
+        return iv + cipherText
+    }
+
+    private fun decrypt(data: ByteArray): String {
+        if (data.size < IV_SIZE) throw IllegalArgumentException("Data too short")
+
+        val cipher = Cipher.getInstance(ALGORITHM)
+        val keySpec = SecretKeySpec(SECRET_KEY_BYTES, "AES")
+
+        // Extract IV
+        val iv = data.copyOfRange(0, IV_SIZE)
+        val gcmSpec = GCMParameterSpec(TAG_BIT_LENGTH, iv)
+
+        cipher.init(Cipher.DECRYPT_MODE, keySpec, gcmSpec)
+
+        // Extract CipherText
+        val cipherText = data.copyOfRange(IV_SIZE, data.size)
+        val plainTextBytes = cipher.doFinal(cipherText)
+
+        return String(plainTextBytes, Charsets.UTF_8)
     }
 
     /**

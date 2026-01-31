@@ -30,6 +30,10 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import com.example.responderapp.MainActivity
 import com.example.responderapp.data.nfc.NfcManager
 import com.example.responderapp.ui.components.NfcReadDialog
@@ -43,6 +47,7 @@ fun DashboardScreen(
     onNavigateToRecords: () -> Unit,
     onNavigateToBleConnection: () -> Unit = {},
     onNavigateToDetail: (String) -> Unit = {},
+    onNavigateToEdit: (String, String?) -> Unit = { _, _ -> },
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val primaryBlue = Color(0xFF3B6EB4)
@@ -225,6 +230,8 @@ fun DashboardScreen(
         }
     }
     
+    val scope = rememberCoroutineScope()
+
     // Show NFC read dialog
     if (nfcReadState.showNfcReadDialog) {
         NfcReadDialog(
@@ -236,6 +243,18 @@ fun DashboardScreen(
             },
             onCancel = {
                 viewModel.onNfcReadEvent(NfcReadEvent.DismissNfcReadDialog)
+            },
+            onUpdate = {
+                val caseId = nfcReadState.nfcReadData?.caseId
+                val nfcData = nfcReadState.nfcReadData
+                if (caseId != null && nfcData != null) {
+                    scope.launch {
+                        viewModel.ensureCaseExists(nfcData)
+                        viewModel.onNfcReadEvent(NfcReadEvent.DismissNfcReadDialog)
+                        // pass null for nfcData string argument since we've now ensured it's in DB
+                        onNavigateToEdit(caseId, null) 
+                    }
+                }
             }
         )
     }

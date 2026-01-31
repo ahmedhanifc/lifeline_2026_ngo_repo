@@ -250,14 +250,7 @@ fun BleConnectionScreen(
                 }
             }
 
-            // Debug: Simulate SOS button (remove in production)
-            Spacer(modifier = Modifier.weight(1f))
-            OutlinedButton(
-                onClick = { viewModel.simulateSOS() },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("🧪 Simulate SOS (Debug)")
-            }
+
         }
     }
     
@@ -319,8 +312,14 @@ private fun SOSAlertDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.fillMaxWidth()
             ) {
+                val alertText = if (event.userName != null) {
+                    "SOS Signal from ${event.userName}!"
+                } else {
+                    "A caretaker has sent an SOS signal!"
+                }
+                
                 Text(
-                    text = "A caretaker has sent an SOS signal!",
+                    text = alertText,
                     style = MaterialTheme.typography.bodyLarge,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(bottom = 16.dp)
@@ -347,7 +346,15 @@ private fun SOSAlertDialog(
                             Text(
                                 text = "Location",
                                 fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
+                        
+                        if (event.userId != null) {
+                            Text(
+                                text = "User ID: ${event.userId}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                modifier = Modifier.padding(bottom = 8.dp)
                             )
                         }
                         

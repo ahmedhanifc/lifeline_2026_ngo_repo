@@ -17,7 +17,7 @@ import com.example.responderapp.data.local.entity.UserAccountEntity
         CaseUpdateEntity::class,
         DistressEventEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

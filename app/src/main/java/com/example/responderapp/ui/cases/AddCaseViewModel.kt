@@ -131,8 +131,6 @@ class AddCaseViewModel @Inject constructor(
             patientFullName = master.patientFullName,
             dateOfBirth = master.dateOfBirth,
             pregnancyStage = update.pregnancyStage,
-            allergies = update.allergies,
-            keyRisks = update.keyRisks,
             lastCheckupSummary = update.clinicalNotes,
             lastCheckupAt = update.capturedAt,
             lastUpdatedAt = update.capturedAt

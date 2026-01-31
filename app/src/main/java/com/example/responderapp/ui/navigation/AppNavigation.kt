@@ -32,8 +32,9 @@ sealed class Screen(val route: String, val label: String = "", val icon: android
     object PatientDetail : Screen("patient_detail/{caseId}") {
         fun createRoute(caseId: String) = "patient_detail/$caseId"
     }
-    object EditCase : Screen("edit_case/{caseId}") {
-        fun createRoute(caseId: String) = "edit_case/$caseId"
+    object EditCase : Screen("edit_case/{caseId}?nfcData={nfcData}") {
+        fun createRoute(caseId: String, nfcData: String? = null) = 
+            if (nfcData != null) "edit_case/$caseId?nfcData=$nfcData" else "edit_case/$caseId"
     }
 }
 
@@ -112,6 +113,9 @@ fun AppNavigation() {
                     onNavigateToBleConnection = { navController.navigate(Screen.BleConnection.route) },
                     onNavigateToDetail = { caseId -> 
                         navController.navigate(Screen.PatientDetail.createRoute(caseId))
+                    },
+                    onNavigateToEdit = { caseId, nfcData ->
+                        navController.navigate(Screen.EditCase.createRoute(caseId, nfcData))
                     }
                 )
             }
@@ -152,6 +156,11 @@ fun AppNavigation() {
                 arguments = listOf(
                     androidx.navigation.navArgument("caseId") { 
                         type = androidx.navigation.NavType.StringType 
+                    },
+                    androidx.navigation.navArgument("nfcData") {
+                        type = androidx.navigation.NavType.StringType
+                        nullable = true
+                        defaultValue = null
                     }
                 )
             ) {

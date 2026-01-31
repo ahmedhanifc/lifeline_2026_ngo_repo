@@ -32,7 +32,7 @@ data class DistressEventEntity(
      * Longitude of the distress location
      */
     val longitude: Double,
-    
+
     /**
      * Raw text of the SOS message
      */
@@ -51,5 +51,15 @@ data class DistressEventEntity(
     /**
      * Whether this distress event has been acknowledged by the responder
      */
-    val acknowledged: Boolean = false
+    val acknowledged: Boolean = false,
+
+    /**
+     * Name of the user seeking help
+     */
+    val userName: String? = null,
+
+    /**
+     * ID of the user seeking help
+     */
+    val userId: String? = null
 )
