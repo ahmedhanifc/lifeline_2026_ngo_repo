@@ -21,6 +21,10 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SignalCellular4Bar
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import android.widget.Toast
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -277,6 +281,8 @@ private fun SOSAlertDialog(
 ) {
     val dateFormat = remember { SimpleDateFormat("HH:mm:ss", Locale.getDefault()) }
     val timeString = remember(event.receivedAt) { dateFormat.format(Date(event.receivedAt)) }
+    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
     
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -358,16 +364,35 @@ private fun SOSAlertDialog(
                             )
                         }
                         
-                        Text(
-                            text = "Lat: ${String.format("%.6f", event.latitude)}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
-                        )
-                        Text(
-                            text = "Lon: ${String.format("%.6f", event.longitude)}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Lat: ${String.format("%.6f", event.latitude)}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                                )
+                                Text(
+                                    text = "Lon: ${String.format("%.6f", event.longitude)}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                                )
+                            }
+                            IconButton(onClick = {
+                                val coordinates = "${event.latitude}, ${event.longitude}"
+                                clipboardManager.setText(AnnotatedString(coordinates))
+                                Toast.makeText(context, "Coordinates copied to clipboard", Toast.LENGTH_SHORT).show()
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.ContentCopy,
+                                    contentDescription = "Copy Coordinates",
+                                    tint = Color(0xFFD32F2F)
+                                )
+                            }
+                        }
                         
                         Spacer(modifier = Modifier.height(12.dp))
                         
