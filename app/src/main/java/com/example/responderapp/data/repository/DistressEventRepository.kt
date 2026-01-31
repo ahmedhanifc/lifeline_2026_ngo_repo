@@ -1,5 +1,6 @@
 package com.example.responderapp.data.repository
 
+import android.util.Log
 import com.example.responderapp.data.ble.BleConnectionState
 import com.example.responderapp.data.ble.BleDevice
 import com.example.responderapp.data.ble.MeshtasticBleClient
@@ -40,8 +41,18 @@ class DistressEventRepository @Inject constructor(
     
     init {
         // Listen to incoming packets and process them
+        Log.d(TAG, "═══════════════════════════════════════════════════════════")
+        Log.d(TAG, "🚀 DistressEventRepository INITIALIZED")
+        Log.d(TAG, "🔗 Subscribing to bleClient.incomingPackets SharedFlow...")
+        Log.d(TAG, "═══════════════════════════════════════════════════════════")
         scope.launch {
+            Log.d(TAG, "📡 Collection coroutine started - waiting for packets...")
             bleClient.incomingPackets.collect { packet ->
+                Log.d(TAG, "═══════════════════════════════════════════════════════════")
+                Log.d(TAG, "📥📥📥 PACKET RECEIVED IN REPOSITORY!")
+                Log.d(TAG, "📥 From: ${packet.from}, To: ${packet.to}")
+                Log.d(TAG, "📥 Has decoded: ${packet.hasDecoded()}")
+                Log.d(TAG, "═══════════════════════════════════════════════════════════")
                 processPacket(packet)
             }
         }
@@ -113,21 +124,40 @@ class DistressEventRepository @Inject constructor(
      * Process an incoming MeshPacket
      */
     private suspend fun processPacket(packet: MeshPacket) {
+        Log.d(TAG, "🔍 Processing packet from node ${packet.from}")
+        
         // Check if it's a text message
-        if (!packet.hasDecoded()) return
+        if (!packet.hasDecoded()) {
+            Log.d(TAG, "⏭️ Packet has no decoded payload - skipping")
+            return
+        }
         
         val data = packet.decoded
-        if (data.portnum != PortNum.TEXT_MESSAGE_APP) return
+        Log.d(TAG, "📋 Packet portnum: ${data.portnum} (expected: ${PortNum.TEXT_MESSAGE_APP})")
+        
+        if (data.portnum != PortNum.TEXT_MESSAGE_APP) {
+            Log.d(TAG, "⏭️ Not a text message - skipping")
+            return
+        }
         
         // Try to decode the payload as UTF-8 text
         val payloadText = try {
             data.payload.toStringUtf8()
         } catch (e: Exception) {
+            Log.e(TAG, "❌ Failed to decode payload as UTF-8", e)
             return
         }
         
+        Log.d(TAG, "💬 Text message received: '$payloadText'")
+        
         // Try to parse as SOS message
-        val sos = meshtasticManager.parseSOSMessage(payloadText) ?: return
+        val sos = meshtasticManager.parseSOSMessage(payloadText)
+        if (sos == null) {
+            Log.d(TAG, "⏭️ Not an SOS message - skipping")
+            return
+        }
+        
+        Log.d(TAG, "🆘 SOS DETECTED! Lat: ${sos.latitude}, Lon: ${sos.longitude}")
         
         // Create and store distress event
         val event = DistressEventEntity(
@@ -143,8 +173,11 @@ class DistressEventRepository @Inject constructor(
         val insertedId = distressEventDao.insert(event)
         val insertedEvent = event.copy(id = insertedId)
         
+        Log.d(TAG, "✅ SOS event saved to database with ID: $insertedId")
+        
         // Emit for real-time updates
         _newDistressEvent.emit(insertedEvent)
+        Log.d(TAG, "📢 SOS event emitted to UI")
     }
     
     /**
@@ -166,5 +199,9 @@ class DistressEventRepository @Inject constructor(
         val insertedId = distressEventDao.insert(event)
         val insertedEvent = event.copy(id = insertedId)
         _newDistressEvent.emit(insertedEvent)
+    }
+    
+    companion object {
+        private const val TAG = "DistressRepo"
     }
 }

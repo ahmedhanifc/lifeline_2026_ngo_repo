@@ -8,6 +8,7 @@ import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.os.Build
+import android.util.Log
 import com.geeksville.mesh.MeshProtos.FromRadio
 import com.geeksville.mesh.MeshProtos.MeshPacket
 import com.geeksville.mesh.MeshProtos.ToRadio
@@ -209,8 +210,10 @@ class MeshtasticBleClient @Inject constructor(
                 }
                 
                 _connectionState.value = BleConnectionState.Listening
+                Log.d(TAG, "✅ Successfully connected and listening for packets")
                 
             } catch (e: Exception) {
+                Log.e(TAG, "❌ Connection error: ${e.message}", e)
                 _connectionState.value = BleConnectionState.Error("Connection error: ${e.message}")
                 disconnect()
             }
@@ -335,46 +338,78 @@ class MeshtasticBleClient @Inject constructor(
      * This is the "mailbox rule" - must read until empty after each notification.
      */
     private suspend fun drainFromRadio() {
+        Log.d(TAG, "📬 Draining FromRadio mailbox... (called from ${Thread.currentThread().name})")
+        var packetCount = 0
+        var readAttempts = 0
         while (true) {
+            readAttempts++
+            Log.d(TAG, "📖 Read attempt #$readAttempts...")
             val bytes = operationQueue.execute { readFromRadio() }
-            if (bytes.isEmpty()) break
+            Log.d(TAG, "📖 Read attempt #$readAttempts returned ${bytes.size} bytes")
+            if (bytes.isEmpty()) {
+                Log.d(TAG, "📭 Mailbox empty after $readAttempts reads (processed $packetCount packets)")
+                break
+            }
+            
+            packetCount++
+            Log.d(TAG, "📨 Read ${bytes.size} bytes from FromRadio (packet #$packetCount)")
+            Log.d(TAG, "📨 Raw bytes (hex): ${bytes.joinToString("") { "%02x".format(it) }}")
             
             try {
                 val fromRadio = FromRadio.parseFrom(bytes)
+                Log.d(TAG, "📦 Parsed FromRadio successfully, type: ${fromRadio.payloadVariantCase}")
                 handleFromRadio(fromRadio)
             } catch (e: Exception) {
-                // Log parse error but continue draining
+                Log.e(TAG, "❌ Failed to parse FromRadio: ${e.message}", e)
             }
         }
     }
     
     private fun handleFromRadio(fromRadio: FromRadio) {
+        Log.d(TAG, "📦 FromRadio type: ${fromRadio.payloadVariantCase}")
         when {
             fromRadio.hasPacket() -> {
                 val packet = fromRadio.packet
+                Log.d(TAG, "📡 MeshPacket received - from: ${packet.from}, to: ${packet.to}, hasDecoded: ${packet.hasDecoded()}")
+                if (packet.hasDecoded()) {
+                    Log.d(TAG, "   Portnum: ${packet.decoded.portnum}, payload size: ${packet.decoded.payload.size()}")
+                }
                 scope.launch {
                     _incomingPackets.emit(packet)
                 }
             }
-            // Handle other message types as needed (config, nodeInfo, etc.)
+            fromRadio.hasMyInfo() -> Log.d(TAG, "ℹ️ MyInfo message")
+            fromRadio.hasNodeInfo() -> Log.d(TAG, "ℹ️ NodeInfo message")
+            fromRadio.hasConfigCompleteId() -> Log.d(TAG, "✅ Config complete")
+            else -> Log.d(TAG, "ℹ️ Other message type: ${fromRadio.payloadVariantCase}")
         }
     }
     
     @SuppressLint("MissingPermission")
     private suspend fun enableFromNumNotifications(): Boolean {
-        val characteristic = fromNumCharacteristic ?: return false
+        Log.d(TAG, "🔔 Enabling FromNum notifications...")
+        val characteristic = fromNumCharacteristic
+        if (characteristic == null) {
+            Log.e(TAG, "❌ FromNum characteristic is null!")
+            return false
+        }
         
         // Enable local notifications
-        bluetoothGatt?.setCharacteristicNotification(characteristic, true)
+        val localEnabled = bluetoothGatt?.setCharacteristicNotification(characteristic, true)
+        Log.d(TAG, "🔔 Local notification enabled: $localEnabled")
         
         // Write to CCCD to enable remote notifications
         val descriptor = characteristic.getDescriptor(MeshtasticBleConstants.CCCD_UUID)
-            ?: return false
+        if (descriptor == null) {
+            Log.e(TAG, "❌ CCCD descriptor not found!")
+            return false
+        }
+        Log.d(TAG, "🔔 Found CCCD descriptor, writing enable value...")
             
         return suspendCancellableCoroutine { continuation ->
             descriptorContinuation = continuation
             
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val writeResult = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 bluetoothGatt?.writeDescriptor(
                     descriptor,
                     BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
@@ -385,6 +420,7 @@ class MeshtasticBleClient @Inject constructor(
                 @Suppress("DEPRECATION")
                 bluetoothGatt?.writeDescriptor(descriptor)
             }
+            Log.d(TAG, "🔔 Descriptor write initiated: $writeResult")
             
             continuation.invokeOnCancellation {
                 descriptorContinuation = null
@@ -482,7 +518,14 @@ class MeshtasticBleClient @Inject constructor(
             descriptor: BluetoothGattDescriptor,
             status: Int
         ) {
-            descriptorContinuation?.resume(status == BluetoothGatt.GATT_SUCCESS)
+            val success = status == BluetoothGatt.GATT_SUCCESS
+            Log.d(TAG, "🔔 Descriptor write callback - success: $success, status: $status")
+            if (success) {
+                Log.d(TAG, "✅ FromNum notifications ENABLED - now listening for mesh packets")
+            } else {
+                Log.e(TAG, "❌ Failed to enable notifications, status code: $status")
+            }
+            descriptorContinuation?.resume(success)
             descriptorContinuation = null
         }
         
@@ -491,11 +534,19 @@ class MeshtasticBleClient @Inject constructor(
             gatt: BluetoothGatt,
             characteristic: BluetoothGattCharacteristic
         ) {
+            Log.d(TAG, "🔔🔔🔔 CHARACTERISTIC CHANGED: ${characteristic.uuid}")
+            Log.d(TAG, "🔔 Expected FromNum UUID: ${MeshtasticBleConstants.FROMNUM_UUID}")
+            Log.d(TAG, "🔔 UUID match: ${characteristic.uuid == MeshtasticBleConstants.FROMNUM_UUID}")
             if (characteristic.uuid == MeshtasticBleConstants.FROMNUM_UUID) {
+                Log.d(TAG, "🚨🚨🚨 FROMNUM NOTIFICATION RECEIVED! NEW PACKETS AVAILABLE!")
+                Log.d(TAG, "🚨 Launching coroutine to drain mailbox...")
                 // FromNum notification - drain the mailbox
                 scope.launch {
+                    Log.d(TAG, "🚨 Coroutine started - draining mailbox now")
                     drainFromRadio()
                 }
+            } else {
+                Log.d(TAG, "⚠️ Notification from OTHER characteristic (not FromNum)")
             }
         }
         
@@ -504,13 +555,26 @@ class MeshtasticBleClient @Inject constructor(
             characteristic: BluetoothGattCharacteristic,
             value: ByteArray
         ) {
+            Log.d(TAG, "🔔🔔🔔 CHARACTERISTIC CHANGED (API 33+): ${characteristic.uuid}")
+            Log.d(TAG, "🔔 Value size: ${value.size}, value (hex): ${value.joinToString("") { "%02x".format(it) }}")
+            Log.d(TAG, "🔔 Expected FromNum UUID: ${MeshtasticBleConstants.FROMNUM_UUID}")
+            Log.d(TAG, "🔔 UUID match: ${characteristic.uuid == MeshtasticBleConstants.FROMNUM_UUID}")
             if (characteristic.uuid == MeshtasticBleConstants.FROMNUM_UUID) {
+                Log.d(TAG, "🚨🚨🚨 FROMNUM NOTIFICATION RECEIVED! NEW PACKETS AVAILABLE!")
+                Log.d(TAG, "🚨 Launching coroutine to drain mailbox...")
                 // FromNum notification - drain the mailbox
                 scope.launch {
+                    Log.d(TAG, "🚨 Coroutine started - draining mailbox now")
                     drainFromRadio()
                 }
+            } else {
+                Log.d(TAG, "⚠️ Notification from OTHER characteristic (not FromNum)")
             }
         }
+    }
+    
+    companion object {
+        private const val TAG = "MeshtasticBLE"
     }
     
     /**
