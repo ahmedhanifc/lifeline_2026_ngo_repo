@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.BluetoothConnected
 import androidx.compose.material.icons.filled.BluetoothSearching
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SignalCellular4Bar
 import androidx.compose.material.icons.filled.Warning
@@ -30,9 +31,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.responderapp.data.ble.BleConnectionState
 import com.example.responderapp.data.ble.BleDevice
+import com.example.responderapp.data.local.entity.DistressEventEntity
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * Screen for BLE device discovery and connection.
@@ -46,7 +52,21 @@ fun BleConnectionScreen(
     val connectionState by viewModel.connectionState.collectAsState()
     val discoveredDevices by viewModel.discoveredDevices.collectAsState()
     val unacknowledgedCount by viewModel.unacknowledgedCount.collectAsState()
+    val latestEvent by viewModel.latestUnacknowledgedEvent.collectAsState()
+    val distressEvents by viewModel.distressEvents.collectAsState()
     val context = LocalContext.current
+    
+    // State to track if we should show the alert dialog
+    var showAlertDialog by remember { mutableStateOf(false) }
+    var currentAlertEvent by remember { mutableStateOf<DistressEventEntity?>(null) }
+    
+    // Show alert when a new unacknowledged event arrives
+    LaunchedEffect(latestEvent) {
+        if (latestEvent != null && latestEvent?.id != currentAlertEvent?.id) {
+            currentAlertEvent = latestEvent
+            showAlertDialog = true
+        }
+    }
 
     // Permission launcher
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -240,8 +260,148 @@ fun BleConnectionScreen(
             }
         }
     }
+    
+    // SOS Alert Dialog
+    if (showAlertDialog && currentAlertEvent != null) {
+        SOSAlertDialog(
+            event = currentAlertEvent!!,
+            onAcknowledge = {
+                viewModel.acknowledgeEvent(currentAlertEvent!!.id)
+                showAlertDialog = false
+            },
+            onDismiss = {
+                showAlertDialog = false
+            }
+        )
+    }
 }
 
+@Composable
+private fun SOSAlertDialog(
+    event: DistressEventEntity,
+    onAcknowledge: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val dateFormat = remember { SimpleDateFormat("HH:mm:ss", Locale.getDefault()) }
+    val timeString = remember(event.receivedAt) { dateFormat.format(Date(event.receivedAt)) }
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color(0xFFFFEBEE),
+        icon = {
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFD32F2F)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(36.dp)
+                )
+            }
+        },
+        title = {
+            Text(
+                text = "🚨 DISTRESS SIGNAL RECEIVED",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFFD32F2F),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        text = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "A caretaker has sent an SOS signal!",
+                    style = MaterialTheme.typography.bodyLarge,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.LocationOn,
+                                contentDescription = null,
+                                tint = Color(0xFFD32F2F),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Location",
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
+                        
+                        Text(
+                            text = "Lat: ${String.format("%.6f", event.latitude)}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                        )
+                        Text(
+                            text = "Lon: ${String.format("%.6f", event.longitude)}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                        )
+                        
+                        Spacer(modifier = Modifier.height(12.dp))
+                        
+                        Text(
+                            text = "Received at: $timeString",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.Gray
+                        )
+                        
+                        if (event.rssi != null) {
+                            Text(
+                                text = "Signal: ${event.rssi} dBm",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.Gray
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onAcknowledge,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF4CAF50)
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("✓ Acknowledge & Respond", fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            OutlinedButton(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Dismiss (Keep Alert)")
+            }
+        }
+    )
+}
 @Composable
 private fun ConnectionStatusCard(
     connectionState: BleConnectionState,

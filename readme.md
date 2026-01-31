@@ -49,6 +49,17 @@ The database structure organizes users, cases, checkups, distress events, and as
 
 The application is developed and run using Android Studio.
 
+# Stop all Gradle daemons
+>> .\gradlew.bat --stop
+>> 
+>> # Wait a few seconds, then manually delete the build folder
+>> Remove-Item -Recurse -Force app\build
+>> 
+>> # Rebuild the app with the new logging
+>> .\gradlew.bat assembleDebug
+
+adb install -r app\build\outputs\apk\debug\app-debug.apk
+
 ## License
 
 This project is released under the MIT License.  

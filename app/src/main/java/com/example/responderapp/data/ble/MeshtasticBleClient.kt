@@ -71,6 +71,10 @@ class MeshtasticBleClient @Inject constructor(
     private var readContinuation: CancellableContinuation<ByteArray>? = null
     private var descriptorContinuation: CancellableContinuation<Boolean>? = null
     
+    // Polling fallback for devices that don't properly send FromNum notifications
+    private var pollingJob: Job? = null
+    private val POLLING_INTERVAL_MS = 5000L  // Poll every 5 seconds
+    
     /**
      * Check if Bluetooth is available and enabled
      */
@@ -212,6 +216,9 @@ class MeshtasticBleClient @Inject constructor(
                 _connectionState.value = BleConnectionState.Listening
                 Log.d(TAG, "✅ Successfully connected and listening for packets")
                 
+                // Start polling fallback - some devices don't properly send FromNum notifications
+                startPollingFallback()
+                
             } catch (e: Exception) {
                 Log.e(TAG, "❌ Connection error: ${e.message}", e)
                 _connectionState.value = BleConnectionState.Error("Connection error: ${e.message}")
@@ -276,18 +283,40 @@ class MeshtasticBleClient @Inject constructor(
     
     @SuppressLint("MissingPermission")
     private suspend fun startMeshtasticSession(): Boolean {
-        // Build startConfig message
+        // Generate a unique config ID (per Meshtastic protocol spec)
+        val configId = (System.currentTimeMillis() and 0xFFFFFFFF).toInt()
+        Log.d(TAG, "🔧 Starting Meshtastic session with config ID: $configId")
+        
+        // Build startConfig message with the unique config ID
         val startConfig = ToRadio.newBuilder()
-            .setWantConfigId(true)
+            .setWantConfigId(configId)
             .build()
         
+        Log.d(TAG, "🔧 ToRadio message size: ${startConfig.toByteArray().size} bytes")
+        Log.d(TAG, "🔧 ToRadio message (hex): ${startConfig.toByteArray().joinToString("") { "%02x".format(it) }}")
+        
         // Write to ToRadio
+        Log.d(TAG, "🔧 Writing ToRadio message...")
         val written = operationQueue.execute {
             writeToRadio(startConfig.toByteArray())
         }
-        if (!written) return false
+        if (!written) {
+            Log.e(TAG, "❌ Failed to write ToRadio message")
+            return false
+        }
+        Log.d(TAG, "✅ ToRadio message written successfully")
         
-        // Drain FromRadio
+        // Give the device time to prepare the config response
+        Log.d(TAG, "🔧 Waiting 1 second for device to prepare response...")
+        delay(1000)
+        
+        // Drain FromRadio - should receive MyInfo, NodeInfo, Config packets, and ConfigCompleteId
+        Log.d(TAG, "🔧 Draining config packets from device...")
+        drainFromRadio()
+        
+        // Wait and drain again in case device is slow
+        Log.d(TAG, "🔧 Waiting 500ms and draining again...")
+        delay(500)
         drainFromRadio()
         
         return true
@@ -429,10 +458,38 @@ class MeshtasticBleClient @Inject constructor(
     }
     
     /**
+     * Start a polling fallback that periodically checks for new packets.
+     * This is a workaround for Meshtastic devices that don't properly send FromNum notifications.
+     */
+    private fun startPollingFallback() {
+        pollingJob?.cancel()
+        pollingJob = scope.launch {
+            Log.d(TAG, "🔄 Starting polling fallback (every ${POLLING_INTERVAL_MS}ms)")
+            while (isActive && _connectionState.value is BleConnectionState.Listening) {
+                delay(POLLING_INTERVAL_MS)
+                if (_connectionState.value is BleConnectionState.Listening) {
+                    Log.d(TAG, "🔄 Polling: checking for new packets...")
+                    drainFromRadio()
+                }
+            }
+            Log.d(TAG, "🔄 Polling fallback stopped")
+        }
+    }
+    
+    /**
+     * Stop the polling fallback
+     */
+    private fun stopPollingFallback() {
+        pollingJob?.cancel()
+        pollingJob = null
+    }
+    
+    /**
      * Disconnect from the current device
      */
     @SuppressLint("MissingPermission")
     fun disconnect() {
+        stopPollingFallback()
         bluetoothGatt?.disconnect()
         bluetoothGatt?.close()
         bluetoothGatt = null

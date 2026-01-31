@@ -269,9 +269,9 @@ message ToRadio {
     MeshPacket packet = 1;
 
     /**
-     * Request config/nodedb from radio
-     */
-    bool want_config_id = 3;
+      * Request config/nodedb from radio - set to a unique config ID
+      */
+    uint32 want_config_id = 3;
 
     /**
      * Disconnect cleanly
